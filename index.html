@@ -1,1 +1,102 @@
-initial commit placeholder
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+    <script>
+    (function()
+    {
+      // Constants.
+      var rolloverMax = 5;
+      var accrualRate = 0.76;
+      
+      window.addEventListener("load", function()
+      {
+        // Set the minimum date to today's date.
+        var minDate = new Date();
+        minDate.setMinutes(minDate.getMinutes() - minDate.getTimezoneOffset() + 1440);
+        endDate.min = minDate.toJSON().slice(0, 10);
+        
+        // Wire up validators.
+        inputForm.addEventListener("submit", function(event)
+        {
+          if (inputForm.checkValidity())
+          {
+            // Normalize start and end dates to timestamps @ midnight local time.
+            var sd = new Date();
+            sd.setHours(sd.getHours() + 24);
+            sd.setHours(0);
+            sd.setMinutes(0);
+            sd.setSeconds(0);
+            sd.setMilliseconds(0);
+            var ed = new Date(endDate.value);
+            ed.setMinutes(ed.getMinutes() + ed.getTimezoneOffset());
+            
+            // Calculate accrual values.
+            var vacationBalance = 1 * startDays.value;
+            var rolloverForfeit = 0;
+            for (var d = sd; d <= ed; d.setHours(d.getHours() + 24))
+            {
+              // On January 1st, cap the vacation balance to the rollover maximum.
+              if (d.getMonth() == 0 && d.getDate() == 1)
+              {
+                rolloverForfeit += Math.max(0, vacationBalance - rolloverMax);
+                vacationBalance = Math.min(vacationBalance, rolloverMax);
+              }
+              // On weekdays, add 1/10th of the accrual rate to the current balance (10 weekdays per pay period).
+              if (d.getDay() >= 1 && d.getDay() <= 5)
+              {
+                vacationBalance += accrualRate / 10;
+              }
+            }
+            // Round forfeit value to the nearest half-day.
+            rolloverForfeit = Math.round(rolloverForfeit * 2) / 2;
+            
+            // Display result.
+            outputText.value = vacationBalance.toFixed(2);
+            if (rolloverForfeit > 0)
+              errorText.innerText = "Warning: At current vacation balance, you will lose " + rolloverForfeit + " vacation days on January 1st. Maximum rollover amount is 5 vacation days.";
+            else
+              errorText.innerText = "";
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          inputForm.classList.add("was-validated");
+        }, false);
+      }, false);
+    }());
+    </script>
+  </head>
+  <body>
+    <form id="inputForm" novalidate style="/*margin-left: 100px; margin-top: 100px; width: 600px; height: 400px*/">
+      <div class="form-group row">
+        <label for="startDays" class="col-4 col-form-label">Current Vacation Balance</label>
+        <div class="col-8">
+          <input id="startDays" class="form-control" type="number" step="0.01" required placeholder="Not sure? Check BambooHR.">
+        </div>
+      </div>
+      <div class="form-group row">
+        <label for="endDate" class="col-4 col-form-label">End Date</label>
+        <div class="col-8">
+          <input id="endDate" class="form-control" type="date" required>
+        </div>
+      </div>
+      <div class="form-group row" style="margin-bottom: 50px">
+        <div class="col-8 ml-auto">
+          <button class="btn btn-primary" type="submit">Calculate</button>
+        </div>
+      </div>
+      <div class="form-group row">
+          <label for="outputText" class="col-4 col-form-label">Projected Vacation Balance</label>
+          <div class="col-8">
+            <input id="outputText" class="form-control" type="text" readonly placeholder="Based on accrual rate of .76 days per pay period">
+          </div>
+      </div>
+      <div class="form-group row">
+          <label id="errorText" class="col-12 col-form-label" style="color: red"></label>
+      </div>
+    </form>
+  </body>
+</html>
